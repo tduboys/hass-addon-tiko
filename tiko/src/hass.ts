@@ -22,7 +22,6 @@ export function computeHassMqttConfiguration(
     const climateEntityTopic = `${HASS_MQTT_DISCOVERY_PREFIX}/climate/${fqid}`;
     const climateStateTopic = `${climateEntityTopic}/state`;
     const climateCommandTopic = `${climateEntityTopic}/set`;
-    const climateActionTopic = `${climateEntityTopic}/action`;
 
     const energyEntityTopic = `${HASS_MQTT_DISCOVERY_PREFIX}/sensor/${fqid}`;
     const energyStateTopic = `${energyEntityTopic}/state`;
@@ -71,6 +70,8 @@ export function computeHassMqttConfiguration(
 
           mode_state_topic: climateStateTopic,
           mode_state_template: "{{ value_json.mode }}",
+          action_topic: climateStateTopic,
+          action_template: "{{ value_json.action }}",
           ...(supportsHumidity
             ? {
                 current_humidity_topic: climateStateTopic,
@@ -90,26 +91,22 @@ export function computeHassMqttConfiguration(
           preset_mode_command_topic: climateCommandTopic,
           preset_mode_command_template:
             '{{ {"type": "presetMode", "presetMode": value} | tojson }}',
-          action_template:"{{ value_json.action }}",
-          action_topic: climateActionTopic,
         }),
       },
       {
         topic: climateStateTopic,
         retain: true,
         message: JSON.stringify({
-          mode: room.presetMode != "off" ? "heat" : "off",
+          mode: room.presetMode === "off" ? "off" : "heat",
+          action: room.heating
+            ? "heating"
+            : room.presetMode === "off"
+            ? "off"
+            : "idle",
           current_humidity: room.currentHumidity,
           current_temperature: room.currentTemperature,
           target_temperature: room.targetTemperature,
           preset_mode: room.presetMode,
-        }),
-      },
-      {
-        topic: climateActionTopic,
-        retain: true,
-        message: JSON.stringify({
-          action: room.heating ? "heating" : "idle"
         }),
       },
       {
